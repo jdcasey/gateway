@@ -9,10 +9,10 @@ import io.vertx.core.http.HttpServerRequest;
 import io.vertx.mutiny.core.buffer.Buffer;
 import io.vertx.mutiny.ext.web.client.HttpResponse;
 import org.apache.commons.io.IOUtils;
+import org.commonjava.o11yphant.trace.quarkus.UniTracer;
 import org.commonjava.util.gateway.cache.CacheHandler;
 import org.commonjava.util.gateway.config.ProxyConfiguration;
 import org.commonjava.util.gateway.interceptor.ExceptionHandler;
-import org.commonjava.util.gateway.interceptor.MetricsHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,7 +42,6 @@ import static org.commonjava.util.gateway.util.ServiceUtils.getTimeout;
 import static org.commonjava.util.gateway.util.ServiceUtils.parseTimeout;
 
 @ApplicationScoped
-@MetricsHandler
 @ExceptionHandler
 public class ProxyService
 {
@@ -64,6 +63,9 @@ public class ProxyService
 
     @Inject
     CacheHandler cacheHandler;
+
+    @Inject
+    UniTracer uniTracer;
 
     @PostConstruct
     void init()
@@ -99,43 +101,43 @@ public class ProxyService
 
     public Uni<Response> doHead( String path, HttpServerRequest request ) throws Exception
     {
-        return normalizePathAnd( path, p -> classifier.classifyAnd( p, request,
+        return uniTracer.trace( request, normalizePathAnd( path, p -> classifier.classifyAnd( p, request,
                                                                     (client, service) -> wrapAsyncCall( client.head( p )
                                                                                                    .putHeaders( getHeaders( request ) )
                                                                                                    .timeout( getTimeout( service, p, timeout ) )
-                                                                                                   .send(), request.method() ) ) );
+                                                                                                   .send(), request.method() ) ) ) );
     }
 
     public Uni<Response> doGet( String path, HttpServerRequest request ) throws Exception
     {
-        return normalizePathAnd( path, p -> classifier.classifyAnd( p, request,
+        return uniTracer.trace( request, normalizePathAnd( path, p -> classifier.classifyAnd( p, request,
                                                                     (client, service) ->
                                                                                     cacheHandler.wrapWithCache( wrapAsyncCall( client.get( p )
                                                                                                    .putHeaders( getHeaders( request ) )
                                                                                                    .timeout( getTimeout( service, p, timeout ) )
-                                                                                                   .send(), request.method() ), p, service ) ) );
+                                                                                                   .send(), request.method() ), p, service ) ) ) );
     }
 
     public Uni<Response> doPost( String path, InputStream is, HttpServerRequest request ) throws Exception
     {
         Buffer buf = Buffer.buffer( IOUtils.toByteArray( is ) );
 
-        return normalizePathAnd( path, p -> classifier.classifyAnd( p, request,
+        return uniTracer.trace( request, normalizePathAnd( path, p -> classifier.classifyAnd( p, request,
                                                                     (client, service) -> wrapAsyncCall( client.post( p )
                                                                                                    .putHeaders( getHeaders( request ) )
                                                                                                    .timeout( getTimeout( service, p, timeout ) )
-                                                                                                   .sendBuffer( buf ), request.method() ) ) );
+                                                                                                   .sendBuffer( buf ), request.method() ) ) ) );
     }
 
     public Uni<Response> doPut( String path, InputStream is, HttpServerRequest request ) throws Exception
     {
         Buffer buf = Buffer.buffer( IOUtils.toByteArray( is ) );
 
-        return normalizePathAnd( path, p -> classifier.classifyAnd( p, request,
+        return uniTracer.trace( request, normalizePathAnd( path, p -> classifier.classifyAnd( p, request,
                                                                     (client, service) -> wrapAsyncCall( client.put( p )
                                                                                                    .putHeaders( getHeaders( request ) )
                                                                                                    .timeout( getTimeout( service, p, timeout ) )
-                                                                                                   .sendBuffer( buf ), request.method() ) ) );
+                                                                                                   .sendBuffer( buf ), request.method() ) ) ) );
     }
 
     public Uni<Response> doDelete( String path, HttpServerRequest request ) throws Exception
