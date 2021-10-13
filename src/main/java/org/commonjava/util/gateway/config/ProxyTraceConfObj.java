@@ -4,6 +4,8 @@ import io.quarkus.arc.config.ConfigProperties;
 import org.commonjava.o11yphant.honeycomb.HoneycombConfiguration;
 import org.commonjava.o11yphant.trace.TracerConfiguration;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Method;
 import java.util.Map;
@@ -39,7 +41,7 @@ public class ProxyTraceConfObj
     @Override
     public boolean isConsoleTransport()
     {
-        return consoleTransport.isPresent() ? consoleTransport.get() : true;
+        return consoleTransport.isPresent() ? consoleTransport.get() : false;
     }
 
     @Override
@@ -87,7 +89,27 @@ public class ProxyTraceConfObj
 
     public boolean isValid()
     {
-        return tracer.get() == TracerPlugin.honeycomb
-                        && dataset.isPresent() && writeKey.isPresent();
+        final Logger logger = LoggerFactory.getLogger( getClass() );
+
+        boolean valid = true;
+        if( tracer.isPresent() && tracer.get() != TracerPlugin.honeycomb )
+        {
+            logger.warn( "Trace plugin value {} is not supported!", tracer.get() );
+            valid = false;
+        }
+
+        if ( !dataset.isPresent() )
+        {
+            logger.warn( "Trace plugin Honeycomb.io dataset is missing!" );
+            valid = false;
+        }
+
+        if ( !writeKey.isPresent() )
+        {
+            logger.warn( "Trace plugin Honeycomb.io write key is missing!" );
+            valid = false;
+        }
+
+        return valid;
     }
 }

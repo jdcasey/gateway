@@ -72,11 +72,6 @@
             <artifactId>o11yphant-trace-honeycomb</artifactId>
             <version>${o11yphant.version}</version>
         </dependency>
-        <dependency>
-            <groupId>org.commonjava.util</groupId>
-            <artifactId>o11yphant-trace-honeycomb</artifactId>
-            <version>${o11yphant.version}</version>
-        </dependency>
 
         <dependency>
             <groupId>io.quarkus</groupId>

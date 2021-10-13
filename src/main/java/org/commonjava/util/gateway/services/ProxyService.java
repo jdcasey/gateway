@@ -10,6 +10,7 @@ import io.vertx.mutiny.core.buffer.Buffer;
 import io.vertx.mutiny.ext.web.client.HttpResponse;
 import org.apache.commons.io.IOUtils;
 import org.commonjava.o11yphant.trace.quarkus.UniTracer;
+import org.commonjava.o11yphant.trace.spi.adapter.SpanAdapter;
 import org.commonjava.util.gateway.cache.CacheHandler;
 import org.commonjava.util.gateway.config.ProxyConfiguration;
 import org.commonjava.util.gateway.interceptor.ExceptionHandler;
@@ -25,9 +26,15 @@ import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.time.Duration;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
+import java.util.function.Supplier;
 
 import static io.vertx.core.http.HttpMethod.HEAD;
 import static io.vertx.core.http.impl.HttpUtils.normalizePath;
@@ -101,43 +108,50 @@ public class ProxyService
 
     public Uni<Response> doHead( String path, HttpServerRequest request ) throws Exception
     {
-        return uniTracer.trace( request, normalizePathAnd( path, p -> classifier.classifyAnd( p, request,
-                                                                    (client, service) -> wrapAsyncCall( client.head( p )
+        return normalizePathAnd( path, p -> classifier.classifyAnd( p, request,
+                                                                                                           (client, service) -> wrapAsyncCall( client.head( p )
                                                                                                    .putHeaders( getHeaders( request ) )
                                                                                                    .timeout( getTimeout( service, p, timeout ) )
-                                                                                                   .send(), request.method() ) ) ) );
+                                                                                                   .send(), request.method() ) ) );
     }
 
     public Uni<Response> doGet( String path, HttpServerRequest request ) throws Exception
     {
-        return uniTracer.trace( request, normalizePathAnd( path, p -> classifier.classifyAnd( p, request,
-                                                                    (client, service) ->
-                                                                                    cacheHandler.wrapWithCache( wrapAsyncCall( client.get( p )
-                                                                                                   .putHeaders( getHeaders( request ) )
-                                                                                                   .timeout( getTimeout( service, p, timeout ) )
-                                                                                                   .send(), request.method() ), p, service ) ) ) );
+//        AtomicReference<Map<String, String>> ctxRef = new AtomicReference<>();
+
+        UniTracer.CheckedFunction<Map<String, String>, Uni<Response>> uniFunc = ( ctxProp) -> {
+            return normalizePathAnd( path,
+                              p -> classifier.classifyAnd( p, request,
+                                                           (client, service) ->
+                                                                           cacheHandler.wrapWithCache( wrapAsyncCall( client.get( p )
+                                                                                                                            .putHeaders( getHeaders( request, ctxProp ) )
+                                                                                                                            .timeout( getTimeout( service, p, timeout ) )
+                                                                                                                            .send(), request.method() ), p, service ) ) );
+        };
+
+        return uniTracer.trace( request, uniFunc );
     }
 
     public Uni<Response> doPost( String path, InputStream is, HttpServerRequest request ) throws Exception
     {
         Buffer buf = Buffer.buffer( IOUtils.toByteArray( is ) );
 
-        return uniTracer.trace( request, normalizePathAnd( path, p -> classifier.classifyAnd( p, request,
-                                                                    (client, service) -> wrapAsyncCall( client.post( p )
+        return normalizePathAnd( path, p -> classifier.classifyAnd( p, request,
+                                                                                                           (client, service) -> wrapAsyncCall( client.post( p )
                                                                                                    .putHeaders( getHeaders( request ) )
                                                                                                    .timeout( getTimeout( service, p, timeout ) )
-                                                                                                   .sendBuffer( buf ), request.method() ) ) ) );
+                                                                                                   .sendBuffer( buf ), request.method() ) ) );
     }
 
     public Uni<Response> doPut( String path, InputStream is, HttpServerRequest request ) throws Exception
     {
         Buffer buf = Buffer.buffer( IOUtils.toByteArray( is ) );
 
-        return uniTracer.trace( request, normalizePathAnd( path, p -> classifier.classifyAnd( p, request,
-                                                                    (client, service) -> wrapAsyncCall( client.put( p )
+        return normalizePathAnd( path, p -> classifier.classifyAnd( p, request,
+                                                                                                           (client, service) -> wrapAsyncCall( client.put( p )
                                                                                                    .putHeaders( getHeaders( request ) )
                                                                                                    .timeout( getTimeout( service, p, timeout ) )
-                                                                                                   .sendBuffer( buf ), request.method() ) ) ) );
+                                                                                                   .sendBuffer( buf ), request.method() ) ) );
     }
 
     public Uni<Response> doDelete( String path, HttpServerRequest request ) throws Exception
@@ -218,6 +232,12 @@ public class ProxyService
 
     private io.vertx.mutiny.core.MultiMap getHeaders( HttpServerRequest request )
     {
+        return getHeaders( request, new HashMap<>() );
+    }
+
+    private io.vertx.mutiny.core.MultiMap getHeaders( HttpServerRequest request,
+                                                      Map<String, String> propagatedContext )
+    {
         MultiMap headers = request.headers();
         io.vertx.mutiny.core.MultiMap ret = io.vertx.mutiny.core.MultiMap.newInstance( headers )
                                                                          .remove( HOST )
@@ -238,6 +258,9 @@ public class ProxyService
         }
 
         logger.trace( "Req headers:\n{}", ret );
+
+        propagatedContext.forEach( ( k, v ) -> ret.add( k, v ) );
+
         return ret;
     }
 
@@ -251,13 +274,13 @@ public class ProxyService
         return isNotBlank( externalID ) ? externalID : UUID.randomUUID().toString();
     }
 
-    @FunctionalInterface
-    private interface CheckedFunction<T, R>
-    {
-        R apply( T t ) throws Exception;
-    }
+//    @FunctionalInterface
+//    private interface CheckedFunction<T, R>
+//    {
+//        R apply( T t ) throws Exception;
+//    }
 
-    private <R> R normalizePathAnd( String path, CheckedFunction<String, R> action ) throws Exception
+    private <R> R normalizePathAnd( String path, UniTracer.CheckedFunction<String, R> action ) throws Exception
     {
         return action.apply( normalizePath( path ) );
     }

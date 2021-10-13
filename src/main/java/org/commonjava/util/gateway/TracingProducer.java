@@ -39,15 +39,15 @@ import java.util.Optional;
 @ApplicationScoped
 public class TracingProducer
 {
-    private TraceManager traceManager;
+    TraceManager traceManager;
 
-    private TraceThreadContextualizer<?> traceThreadContextualizer;
-
-    @Inject
-    private ProxyTraceConfObj config;
+    TraceThreadContextualizer<?> traceThreadContextualizer;
 
     @Inject
-    private Instance<SpanFieldsInjector> rsfInstance;
+    ProxyTraceConfObj config;
+
+    @Inject
+    Instance<SpanFieldsInjector> rsfInstance;
 
     private final Logger logger = LoggerFactory.getLogger( getClass() );
 
