@@ -59,6 +59,11 @@
         </dependency>
         <dependency>
             <groupId>org.commonjava.util</groupId>
+            <artifactId>o11yphant-metrics-helper-quarkus</artifactId>
+            <version>${o11yphant.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.commonjava.util</groupId>
             <artifactId>o11yphant-trace-core</artifactId>
             <version>${o11yphant.version}</version>
         </dependency>

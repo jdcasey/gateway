@@ -2,6 +2,7 @@ package org.commonjava.util.gateway;
 
 import io.smallrye.mutiny.Uni;
 import io.vertx.core.http.HttpServerRequest;
+import org.commonjava.o11yphant.metrics.annotation.Measure;
 import org.commonjava.util.gateway.services.ProxyService;
 import org.jboss.resteasy.annotations.jaxrs.PathParam;
 import org.slf4j.Logger;
@@ -35,6 +36,7 @@ public class ProxyResource
     }
 
     @GET
+    @Measure
     public Uni<Response> get( @PathParam( "path" ) String path, final @Context HttpServerRequest request )
                     throws Exception
     {
@@ -43,6 +45,7 @@ public class ProxyResource
     }
 
     @POST
+    @Measure
     public Uni<Response> post( @PathParam( "path" ) String path, InputStream is,
                                final @Context HttpServerRequest request ) throws Exception
     {
@@ -51,6 +54,7 @@ public class ProxyResource
     }
 
     @PUT
+    @Measure
     public Uni<Response> put( @PathParam( "path" ) String path, InputStream is,
                               final @Context HttpServerRequest request ) throws Exception
     {
@@ -59,6 +63,7 @@ public class ProxyResource
     }
 
     @DELETE
+    @Measure
     public Uni<Response> delete( @PathParam( "path" ) String path, final @Context HttpServerRequest request )
                     throws Exception
     {
