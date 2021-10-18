@@ -1,6 +1,6 @@
 package org.commonjava.util.gateway.util;
 
-import org.commonjava.util.gateway.config.ProxyConfiguration;
+import org.commonjava.util.gateway.config.ServiceConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,7 +21,7 @@ public class ServiceUtils
     /**
      * Get timeout according to path patterns, e.g., .+/promote -> 30m, ...
      */
-    public static long getTimeout( ProxyConfiguration.ServiceConfig serviceConfig, String path, long defaultTimeout )
+    public static long getTimeout( ServiceConfig serviceConfig, String path, long defaultTimeout )
     {
         if ( !serviceConfig.getTimeoutMap().isEmpty() )
         {

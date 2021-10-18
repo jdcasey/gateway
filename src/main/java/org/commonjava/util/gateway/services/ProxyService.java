@@ -9,11 +9,11 @@ import io.vertx.core.http.HttpServerRequest;
 import io.vertx.mutiny.core.buffer.Buffer;
 import io.vertx.mutiny.ext.web.client.HttpResponse;
 import org.apache.commons.io.IOUtils;
-import org.commonjava.o11yphant.trace.quarkus.UniTracer;
-import org.commonjava.o11yphant.trace.spi.adapter.SpanAdapter;
+import org.commonjava.o11yphant.trace.quarkus.MutinyTracer;
 import org.commonjava.util.gateway.cache.CacheHandler;
 import org.commonjava.util.gateway.config.ProxyConfiguration;
 import org.commonjava.util.gateway.interceptor.ExceptionHandler;
+import org.commonjava.util.gateway.util.BufferStreamingOutput;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,6 +21,7 @@ import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.StreamingOutput;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
@@ -28,13 +29,8 @@ import java.net.URL;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.BiConsumer;
-import java.util.function.BiFunction;
-import java.util.function.Supplier;
 
 import static io.vertx.core.http.HttpMethod.HEAD;
 import static io.vertx.core.http.impl.HttpUtils.normalizePath;
@@ -72,7 +68,7 @@ public class ProxyService
     CacheHandler cacheHandler;
 
     @Inject
-    UniTracer uniTracer;
+    MutinyTracer mutinyTracer;
 
     @PostConstruct
     void init()
@@ -117,19 +113,15 @@ public class ProxyService
 
     public Uni<Response> doGet( String path, HttpServerRequest request ) throws Exception
     {
-//        AtomicReference<Map<String, String>> ctxRef = new AtomicReference<>();
-
-        UniTracer.CheckedFunction<Map<String, String>, Uni<Response>> uniFunc = ( ctxProp) -> {
-            return normalizePathAnd( path,
+        MutinyTracer.CheckedFunction<Map<String, String>, Uni<Response>> uniFunc = ( ctxProp) -> normalizePathAnd( path,
                               p -> classifier.classifyAnd( p, request,
                                                            (client, service) ->
                                                                            cacheHandler.wrapWithCache( wrapAsyncCall( client.get( p )
                                                                                                                             .putHeaders( getHeaders( request, ctxProp ) )
                                                                                                                             .timeout( getTimeout( service, p, timeout ) )
                                                                                                                             .send(), request.method() ), p, service ) ) );
-        };
 
-        return uniTracer.trace( request, uniFunc );
+        return mutinyTracer.trace( request, uniFunc );
     }
 
     public Uni<Response> doPost( String path, InputStream is, HttpServerRequest request ) throws Exception
@@ -210,8 +202,11 @@ public class ProxyService
         } );
         if ( resp.body() != null )
         {
-            byte[] bytes = resp.body().getBytes();
-            builder.entity( bytes );
+//            byte[] bytes = resp.body().getBytes();
+//            builder.entity( bytes );
+//            logger.info( "Writing {} bytes", bytes.length );
+            StreamingOutput so = new BufferStreamingOutput( resp );
+            builder.entity( so );
         }
         return builder.build();
     }
@@ -280,7 +275,7 @@ public class ProxyService
 //        R apply( T t ) throws Exception;
 //    }
 
-    private <R> R normalizePathAnd( String path, UniTracer.CheckedFunction<String, R> action ) throws Exception
+    private <R> R normalizePathAnd( String path, MutinyTracer.CheckedFunction<String, R> action ) throws Exception
     {
         return action.apply( normalizePath( path ) );
     }
