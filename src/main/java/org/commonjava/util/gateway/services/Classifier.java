@@ -6,6 +6,7 @@ import io.vertx.ext.web.client.WebClientOptions;
 import io.vertx.mutiny.core.Vertx;
 import io.vertx.mutiny.ext.web.client.WebClient;
 import org.commonjava.util.gateway.config.ProxyConfiguration;
+import org.commonjava.util.gateway.config.ServiceConfig;
 import org.commonjava.util.gateway.exception.ServiceNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,12 +29,12 @@ public class Classifier
     @Inject
     ProxyConfiguration serviceConfiguration;
 
-    private Map<ProxyConfiguration.ServiceConfig, WebClient> clientMap = new ConcurrentHashMap<>();
+    private Map<ServiceConfig, WebClient> clientMap = new ConcurrentHashMap<>();
 
     public <R> R classifyAnd( String path, HttpServerRequest request,
-                              BiFunction<WebClient, ProxyConfiguration.ServiceConfig, R> action ) throws Exception
+                              BiFunction<WebClient, ServiceConfig, R> action ) throws Exception
     {
-        ProxyConfiguration.ServiceConfig service = getServiceConfig( path, request );
+        ServiceConfig service = getServiceConfig( path, request );
         if ( service == null )
         {
             throw new ServiceNotFoundException( "Service not found, path: " + path + ", method: " + request.method() );
@@ -41,16 +42,16 @@ public class Classifier
         return action.apply( getWebClient( service ), service );
     }
 
-    private ProxyConfiguration.ServiceConfig getServiceConfig( String path, HttpServerRequest request ) throws Exception
+    private ServiceConfig getServiceConfig( String path, HttpServerRequest request ) throws Exception
     {
         HttpMethod method = request.method();
 
-        ProxyConfiguration.ServiceConfig service = null;
+        ServiceConfig service = null;
 
-        Set<ProxyConfiguration.ServiceConfig> services = serviceConfiguration.getServices();
+        Set<ServiceConfig> services = serviceConfiguration.getServices();
         if ( services != null )
         {
-            for ( ProxyConfiguration.ServiceConfig sv : services )
+            for ( ServiceConfig sv : services )
             {
                 if ( path.matches( sv.pathPattern ) && ( sv.methods == null || sv.methods.contains( method.name() ) ) )
                 {
@@ -62,7 +63,7 @@ public class Classifier
         return service;
     }
 
-    private WebClient getWebClient( ProxyConfiguration.ServiceConfig service ) throws Exception
+    private WebClient getWebClient( ServiceConfig service ) throws Exception
     {
         return clientMap.computeIfAbsent( service, k -> {
             WebClientOptions options = new WebClientOptions().setDefaultHost( k.host ).setDefaultPort( k.port );
