@@ -2,8 +2,8 @@ package org.commonjava.util.gateway.config;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.quarkus.runtime.Startup;
-import io.vertx.mutiny.core.eventbus.EventBus;
 import io.vertx.core.json.JsonObject;
+import io.vertx.mutiny.core.eventbus.EventBus;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
@@ -18,15 +18,12 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.time.Duration;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.regex.Pattern;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.apache.commons.lang3.StringUtils.isNotBlank;
 import static org.commonjava.util.gateway.services.ProxyConstants.EVENT_PROXY_CONFIG_CHANGE;
 
 @Startup
@@ -112,15 +109,15 @@ public class ProxyConfiguration
         }
     }
 
-    private transient String md5Hex; // used to check whether the custom proxy.yaml has changed
+    private transient String stateHash; // used to check whether the custom proxy.yaml has changed
 
     private void doLoad( InputStream res )
     {
         try
         {
             String str = IOUtils.toString( res, UTF_8 );
-            String md5 = DigestUtils.md5Hex( str ).toUpperCase();
-            if ( md5.equals( md5Hex ) )
+            String nextStateHash = DigestUtils.sha256Hex( str ).toUpperCase();
+            if ( nextStateHash.equals( stateHash ) )
             {
                 logger.info( "Skip, NO_CHANGE" );
                 return;
@@ -143,12 +140,12 @@ public class ProxyConfiguration
                 } );
             }
 
-            if ( md5Hex != null )
+            if ( stateHash != null )
             {
                 bus.publish( EVENT_PROXY_CONFIG_CHANGE, "" );
             }
 
-            md5Hex = md5;
+            stateHash = nextStateHash;
         }
         catch ( IOException e )
         {

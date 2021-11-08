@@ -1,10 +1,7 @@
 package org.commonjava.util.gateway.cache;
 
 import io.smallrye.mutiny.Uni;
-import io.vertx.mutiny.core.buffer.Buffer;
-import io.vertx.mutiny.ext.web.client.HttpResponse;
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.output.TeeOutputStream;
 import org.commonjava.util.gateway.cache.strategy.DefaultCacheStrategy;
 import org.commonjava.util.gateway.cache.strategy.PrefixTrimCacheStrategy;
 import org.commonjava.util.gateway.config.CacheConfiguration;
@@ -20,7 +17,6 @@ import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
