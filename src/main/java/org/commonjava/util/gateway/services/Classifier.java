@@ -1,5 +1,6 @@
 package org.commonjava.util.gateway.services;
 
+import io.opentelemetry.api.trace.Span;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.ext.web.client.WebClientOptions;
@@ -35,10 +36,18 @@ public class Classifier
                               BiFunction<WebClient, ServiceConfig, R> action ) throws Exception
     {
         ServiceConfig service = getServiceConfig( path, request );
+
         if ( service == null )
         {
             throw new ServiceNotFoundException( "Service not found, path: " + path + ", method: " + request.method() );
         }
+
+        Span.current().setAttribute( "name", "proxy" );
+        Span.current().setAttribute( "gateway.target.host", service.host );
+        Span.current().setAttribute( "gateway.target.port", service.port );
+        Span.current().setAttribute( "gateway.target.method", request.method().name() );
+        Span.current().setAttribute( "gateway.target.path", path );
+
         return action.apply( getWebClient( service ), service );
     }
 

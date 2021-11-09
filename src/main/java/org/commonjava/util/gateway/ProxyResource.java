@@ -1,5 +1,6 @@
 package org.commonjava.util.gateway;
 
+import io.opentelemetry.api.trace.Span;
 import io.smallrye.mutiny.Uni;
 import io.vertx.core.http.HttpServerRequest;
 import org.commonjava.util.gateway.services.ProxyService;

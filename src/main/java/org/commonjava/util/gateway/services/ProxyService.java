@@ -11,8 +11,6 @@ import io.vertx.mutiny.ext.web.client.HttpResponse;
 import org.apache.commons.io.IOUtils;
 import org.commonjava.util.gateway.cache.CacheHandler;
 import org.commonjava.util.gateway.config.ProxyConfiguration;
-import org.commonjava.util.gateway.interceptor.ExceptionHandler;
-import org.commonjava.util.gateway.interceptor.MetricsHandler;
 import org.commonjava.util.gateway.util.BufferStreamingOutput;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,16 +34,12 @@ import static io.vertx.core.http.impl.HttpUtils.normalizePath;
 import static javax.ws.rs.core.HttpHeaders.HOST;
 import static javax.ws.rs.core.Response.Status.INTERNAL_SERVER_ERROR;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
-import static org.commonjava.o11yphant.metrics.RequestContextConstants.EXTERNAL_ID;
-import static org.commonjava.o11yphant.metrics.RequestContextConstants.TRACE_ID;
 import static org.commonjava.util.gateway.services.ProxyConstants.EVENT_PROXY_CONFIG_CHANGE;
 import static org.commonjava.util.gateway.services.ProxyConstants.FORBIDDEN_HEADERS;
 import static org.commonjava.util.gateway.util.ServiceUtils.getTimeout;
 import static org.commonjava.util.gateway.util.ServiceUtils.parseTimeout;
 
 @ApplicationScoped
-@MetricsHandler
-@ExceptionHandler
 public class ProxyService
 {
     private final Logger logger = LoggerFactory.getLogger( getClass() );
@@ -223,8 +217,7 @@ public class ProxyService
     {
         MultiMap headers = request.headers();
         io.vertx.mutiny.core.MultiMap ret = io.vertx.mutiny.core.MultiMap.newInstance( headers )
-                                                                         .remove( HOST )
-                                                                         .add( TRACE_ID, getTraceId( headers ) );
+                                                                         .remove( HOST );
         if ( headers.get( PROXY_ORIGIN ) == null )
         {
             try
@@ -242,16 +235,6 @@ public class ProxyService
 
         logger.trace( "Req headers:\n{}", ret );
         return ret;
-    }
-
-    /**
-     * Get 'trace-id'. If client specify an 'external-id', use it. Otherwise, use an generated uuid. Services under the hook
-     * should use the hereby created 'trace-id', rather than to generate their own.
-     */
-    private String getTraceId( MultiMap headers )
-    {
-        String externalID = headers.get( EXTERNAL_ID );
-        return isNotBlank( externalID ) ? externalID : UUID.randomUUID().toString();
     }
 
     @FunctionalInterface

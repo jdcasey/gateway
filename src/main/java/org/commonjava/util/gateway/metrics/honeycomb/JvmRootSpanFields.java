@@ -1,7 +1,5 @@
 package org.commonjava.util.gateway.metrics.honeycomb;
 
-import org.commonjava.o11yphant.honeycomb.RootSpanFields;
-
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadInfo;
 import java.lang.management.ThreadMXBean;
@@ -9,7 +7,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class JvmRootSpanFields
-                implements RootSpanFields
 {
     private final static long MB = 1024 * 1024;
 
@@ -28,7 +25,6 @@ public class JvmRootSpanFields
     {
     }
 
-    @Override
     public Map<String, Object> get()
     {
         Map<String, Object> ret = new HashMap<>();
